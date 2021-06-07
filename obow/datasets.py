@@ -11,7 +11,7 @@ import random
 import json
 
 from PIL import ImageFilter
-
+from obow.dataset_cityscapes import Cityscapes
 
 _MEAN_PIXEL_IMAGENET = [0.485, 0.456, 0.406]
 _STD_PIXEL_IMAGENET = [0.229, 0.224, 0.225]
@@ -246,6 +246,91 @@ def get_ImageNet_data_for_obow(
     return dataset_train, dataset_test
 
 
+def get_CityScapes_data_for_obow(
+    data_dir,
+    subset=None,
+    cjitter=[0.4, 0.4, 0.4, 0.1],
+    cjitter_p=0.8,
+    gray_p=0.2,
+    gaussian_blur=[0.1, 2.0],
+    gaussian_blur_p=0.5,
+    num_img_crops=2,
+    image_crop_size=160,
+    image_crop_range=[0.08, 0.6],
+    num_img_patches=0,
+    img_patch_preresize=256,
+    img_patch_preresize_range=[0.6, 1.0],
+    img_patch_size=96,
+    img_patch_jitter=24,
+    only_patches=False):
+
+    normalize = T.Normalize(mean=_MEAN_PIXEL_IMAGENET, std=_STD_PIXEL_IMAGENET)
+
+    image_crops_transform = T.Compose([
+        T.RandomResizedCrop(image_crop_size, scale=image_crop_range),
+        T.RandomApply([T.ColorJitter(*cjitter)], p=cjitter_p),
+        T.RandomGrayscale(p=gray_p),
+        T.RandomApply([GaussianBlur(gaussian_blur)], p=gaussian_blur_p),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        normalize,
+    ])
+
+    image_crops_transform = StackMultipleViews(
+        image_crops_transform, num_views=num_img_crops)
+
+    transform_original_train = T.Compose([
+        T.Resize(256),
+        T.CenterCrop(224),
+        T.RandomHorizontalFlip(), # So as, to see both image views.
+        T.ToTensor(),
+        normalize,
+    ])
+    transform_train = [transform_original_train, image_crops_transform]
+
+    if num_img_patches > 0:
+        assert num_img_patches <= 9
+        image_patch_transform = T.Compose([
+            T.RandomResizedCrop(img_patch_preresize, scale=img_patch_preresize_range),
+            T.RandomApply([T.ColorJitter(*cjitter)], p=cjitter_p),
+            T.RandomGrayscale(p=gray_p),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
+            normalize,
+            CropImagePatches(
+                patch_size=img_patch_size, patch_jitter=img_patch_jitter,
+                num_patches=num_img_patches, split_per_side=3),
+        ])
+        if only_patches:
+            transform_train[-1] = image_patch_transform
+        else:
+            transform_train.append(image_patch_transform)
+
+    transform_train = ParallelTransforms(transform_train)
+
+    transform_original = T.Compose([
+        T.Resize(256),
+        T.CenterCrop(224),
+        T.ToTensor(),
+        normalize,
+    ])
+    transform_test = ParallelTransforms([transform_original,])
+
+    print(f"Image transforms during training: {transform_train}")
+    print(f"Image transforms during testing: {transform_test}")
+
+    print("Loading data.")
+    dataset_train = Cityscapes(
+        root=data_dir, split='train_ssl',transform=transform_train)
+    dataset_test = Cityscapes(
+        root=data_dir, split='test', transform=transform_test)
+
+    if (subset is not None) and (subset >= 1):
+        dataset_train = subset_of_ImageNet_train_split(dataset_train, subset)
+
+    return dataset_train, dataset_test
+
+
 def get_data_loaders_for_OBoW(
     dataset_name,
     data_dir,
@@ -263,6 +348,8 @@ def get_data_loaders_for_OBoW(
 
     if dataset_name == "ImageNet":
         dataset_train, dataset_test = get_ImageNet_data_for_obow(data_dir, **kwargs)
+    elif dataset_name == "CityScapes":
+        dataset_train, dataset_test = get_CityScapes_data_for_obow(data_dir, **kwargs)
     else:
         raise NotImplementedError(f"Not supported dataset {dataset_name}")
 

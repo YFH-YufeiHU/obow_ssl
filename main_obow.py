@@ -12,6 +12,7 @@ import torch.nn.parallel
 import torch.backends.cudnn
 import torch.distributed
 import torch.multiprocessing
+import torch.distributed as dist
 
 import obow.builder_obow
 import obow.feature_extractor
@@ -21,6 +22,7 @@ import obow.visualization
 import numpy as np
 
 from obow import project_root
+import idr_torch
 
 
 def get_arguments():
@@ -168,45 +170,14 @@ def main():
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    if args.gpu is not None:
-        warnings.warn('You have chosen a specific GPU. This will completely '
-                      'disable data parallelism.')
-
-    if args.dist_url == "env://" and args.world_size == -1:
-        args.world_size = int(os.environ["WORLD_SIZE"])
-
-    if args.world_size > 1:
-        raise NotImplementedError(
-            f"Multi-machine distributed training (ie, "
-            f"world_size={args.world_size} > 1) is not supported. "
-            f"Only single-machine single-GPU and single-machine multi-GPU "
-            f"training is supported.")
-
-    if ((torch.cuda.device_count() > 1) and
-        (args.gpu is not None) and
-        (not args.multiprocessing_distributed)):
-        raise NotImplementedError(
-            f"There are {torch.cuda.device_count()} GPUs available in the "
-             "machine.\nHowever, Multi-GPU training is only supported via "
-             "DistributedDataParallel and requires to activate the argument "
-             "--multiprocessing-distributed.\nOtherwise choose a single GPU to "
-             "run the experiment, e.g., by adding the argument --gpu=0.")
-
-    args.distributed = args.world_size > 1 or args.multiprocessing_distributed
-    ngpus_per_node = torch.cuda.device_count()
+    args.distributed =  args.multiprocessing_distributed
+    ngpus_per_node = idr_torch.size
 
     if args.multiprocessing_distributed:
-        # Since we have ngpus_per_node processes per node, the total world_size
-        # needs to be adjusted accordingly
-        args.world_size = ngpus_per_node * args.world_size
-        # Use torch.multiprocessing.spawn to launch distributed processes: the
-        # main_worker process function
         torch.multiprocessing.spawn(
-            main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+            main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args), join=True)
     else:
-        # Single-machine single-GPU training setting.
-        # Simply call main_worker function
-        main_worker(args.gpu, ngpus_per_node, args)
+        print('Only support DDP model!')
 
 
 def parse_model_opts(model_opts, num_channels, num_iters_total):
@@ -282,46 +253,23 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.gpu is not None:
         print(f"==> Use GPU: {args.gpu} for training.")
 
-    if args.distributed:
-        # Single-machine Multi-GPU training setting.
-        if args.dist_url == "env://" and args.rank == -1:
-            args.rank = int(os.environ["RANK"])
-        if args.rank < 0 or args.rank > (args.world_size // ngpus_per_node):
-            raise ValueError(
-                f"Invalid rank argument {args.rank}. "
-                 "Rank must specify the id of the current machine in the "
-                 "multi-machine distributed training setting. In case of "
-                 "single-machine multi-gpu distributed setting (which is the "
-                 "most common) then rank must be 0, ie, the id of the single "
-                 "machine.")
-        if args.multiprocessing_distributed:
-            # For multiprocessing distributed training, rank needs to be the
-            # global rank among all the processes
-            args.rank = args.rank * ngpus_per_node + gpu
-        torch.distributed.init_process_group(
-            backend=args.dist_backend,
-            init_method=args.dist_url,
-            world_size=args.world_size,
-            rank=args.rank)
-        if args.gpu is not None:
-            torch.cuda.set_device(args.gpu)
-            # When using a single GPU per process and per
-            # DistributedDataParallel, we need to divide the batch size
-            # ourselves based on the total number of GPUs we have
-            args.batch_size = int(args.batch_size / ngpus_per_node)
-            args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
-            print(f'Rank={args.rank}: workers={args.workers} batch_size={args.batch_size}')
-    else:
-        # Single-machine single-GPU training setting.
-        if (args.gpu is None) and ngpus_per_node == 1:
-            args.gpu = 0
-        torch.cuda.set_device(args.gpu)
+    torch.cuda.set_device(args.gpu)
+    torch.distributed.init_process_group(
+        backend=dist.Backend.NCCL,
+        world_size=args.world_size,
+        rank=args.gpu)
+
+    args.batch_size = int(args.batch_size / ngpus_per_node)
+    args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
+    print(f'Rank={args.rank}: workers={args.workers} batch_size={args.batch_size}')
+
 
     torch.backends.cudnn.benchmark = True
 
     if args.gpu == 0 or args.gpu is None:
         obow.utils.setup_logger(args.exp_dir, "obow")
 
+    #==> load data
     data_opts = args.exp_config["data"]
     dataset_name = data_opts.pop("dataset_name")
     epoch_size = data_opts.pop("epoch_size", None)
@@ -353,7 +301,6 @@ def main_worker(gpu, ngpus_per_node, args):
         alpha=model_opts["alpha"],
         num_classes=model_opts.get("num_classes", None))
 
-    model_without_ddp = model
     model, args = setup_model_distributed_data_parallel(model, args)
     print(f"Model:\n{model}")
 
