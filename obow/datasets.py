@@ -53,6 +53,10 @@ class ParallelTransforms:
         self.transform_list = transform_list
 
     def __call__(self, x):
+        image_transform = T.Compose([
+            T.RandomCrop((300, 300)),
+        ])
+        x = image_transform(x)
         return [transform(x) for transform in self.transform_list]
 
     def __str__(self):
