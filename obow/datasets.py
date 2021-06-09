@@ -15,6 +15,8 @@ from obow.dataset_cityscapes import Cityscapes
 
 _MEAN_PIXEL_IMAGENET = [0.485, 0.456, 0.406]
 _STD_PIXEL_IMAGENET = [0.229, 0.224, 0.225]
+# _MEAN_PIXEL_IMAGENET = [0.485, 0.456, 0.406]
+# _STD_PIXEL_IMAGENET = [0.229, 0.224, 0.225]
 
 
 def generate_element_list(list_size, dataset_size):
