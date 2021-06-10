@@ -279,11 +279,11 @@ class OBoW(nn.Module):
         losses = [self._bow_loss(pred, bow_target) for pred in bow_predictions]
         #***********************************************************************
         #****** MONITORING: APPLY LINEAR CLASSIFIER ON TEACHER FEATURES ********
-        #loss_cls, accuracy = self._linear_classification(features_t[-1], labels)
+        loss_cls, accuracy = self._linear_classification(features_t[-1], labels)
         #***********************************************************************
-        
-        loss_cls = features_t[-1].detach().new_full((1,), 0.0).squeeze()
-        accuracy = features_t[-1].detach().new_full((1,), 0.0).squeeze()
+        #
+        # loss_cls = features_t[-1].detach().new_full((1,), 0.0).squeeze()
+        # accuracy = features_t[-1].detach().new_full((1,), 0.0).squeeze()
         losses = torch.stack(losses + [loss_cls,], dim=0).view(-1)
         logs = list(perp_b + perp_i) + [accuracy,]
         
@@ -617,7 +617,7 @@ class OBoWSolver(solver.Solver):
         batch_size = img_orig.size(0)
         with torch.no_grad():
             # Forward model and compute lossses.
-            lincls, acc1 = self.model(img_orig, None, labels)
+            lincls, acc1 = self.model(img_orig, None, labels=None)
             lincls = lincls.item()
 
         metric_logger["lincls"].update(lincls, batch_size)
@@ -642,7 +642,7 @@ class OBoWSolver(solver.Solver):
         batch_size = img_orig.size(0)
 
         # Forward model and compute lossses.
-        losses, logs = self.model(img_orig, img_crops)
+        losses, logs = self.model(img_orig, img_crops, labels=None)
         loss_total = losses.sum()
 
         # compute gradient and do SGD step
