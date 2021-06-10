@@ -95,7 +95,7 @@ class Cityscapes(data.Dataset):
         self.targets = []
         self.loader = loader
 
-        if split not in ['train', 'test', 'val']:
+        if split not in ['train_ssl', 'test', 'val']:
             raise ValueError('Invalid split for mode! Please use split="train", split="test"'
                              ' or split="val"')
 
@@ -127,7 +127,7 @@ class Cityscapes(data.Dataset):
             image = self.loader(image)
         if self.transform:
             image = self.transform(image)
-        target = None
+        target = torch.LongTensor([1.])
         return image,target
 
     def __len__(self):

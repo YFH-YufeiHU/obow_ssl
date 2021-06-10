@@ -31,6 +31,6 @@ conda activate vissl
 pip list
 python3 main_obow.py --config=cityscapes/ResNet50_OBoW_cityscapes\
                      --workers=32 -p=250 \
-                     --dst-dir=./experiments/ --data-dir=./data/cityscapes/\
+                     --dst-dir=./experiments/ --data-dir=../../MoCo_SSL_segmentation/data/cityscapes/\
                      --multiprocessing-distributed \
-                     --convert-to-torchvision
+                     #--convert-to-torchvision

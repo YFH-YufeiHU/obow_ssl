@@ -145,12 +145,16 @@ def setup_model_distributed_data_parallel(model, args):
             # unecessary: the weight generators in all GPUs get as input the
             # same vocabulary.
             print("Use synchronized BN for the feature extractors.")
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+            model = torch.nn.parallel.DistributedDataParallel(model,device_ids=[args.gpu],\
+                                                                output_device=args.gpu,\
+                                                                find_unused_parameters=True)
         else:
             model.cuda()
             # DistributedDataParallel will divide and allocate batch_size to all
             # available GPUs if device_ids are not set
-            model = torch.nn.parallel.DistributedDataParallel(model)
+            model = torch.nn.parallel.DistributedDataParallel(model,device_ids=[args.gpu],\
+                                                                output_device=args.gpu,\
+                                                                find_unused_parameters=True)
     elif (args.gpu is not None):
         model = model.cuda(args.gpu)
 
@@ -256,8 +260,8 @@ def main_worker(gpu, ngpus_per_node, args):
     torch.cuda.set_device(args.gpu)
     torch.distributed.init_process_group(
         backend=dist.Backend.NCCL,
-        world_size=args.world_size,
-        rank=args.gpu)
+        rank=args.gpu,
+        world_size=ngpus_per_node)
 
     args.batch_size = int(args.batch_size / ngpus_per_node)
     args.workers = int((args.workers + ngpus_per_node - 1) / ngpus_per_node)
