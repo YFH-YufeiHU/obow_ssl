@@ -114,6 +114,10 @@ def get_arguments():
              'No training or evaluation is performed in this case. '
              'Note that it visualizes the model of the last available checkpoint.')
 
+    parser.add_argument(
+        '--resume', action='store_true',
+        help='Load the pretrained model of ImageNet on CityScapes! ')
+
     args = parser.parse_args()
     exp_directory = pathlib.Path(args.dst_dir) / args.config
     os.makedirs(exp_directory, exist_ok=True)
@@ -318,6 +322,10 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.start_epoch != 0:
         print(f"==> [Rank {args.gpu}] - Loading checkpoint of: {args.start_epoch}")
         solver.load_checkpoint(epoch=args.start_epoch)
+
+    if args.resume:
+        print("load pretrained model of ImageNet on CityScapes!")
+        solver.load_checkpoint_on_CityScapes(last=200)
 
     if args.convert_to_torchvision:
         arch = model_opts['feature_extractor_arch']

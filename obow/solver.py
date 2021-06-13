@@ -200,10 +200,16 @@ class Solver:
             epoch = self.find_last_epoch(suffix)
         assert isinstance(epoch, int)
         assert epoch >= 0
-        self.load_network(epoch, suffix) # load network parameters
-        if load_optimizer: # initialize and load optimizer
+        self.load_network(epoch, suffix)  # load network parameters
+        if load_optimizer:  # initialize and load optimizer
             self.load_optimizer(epoch, suffix)
         self._epoch = epoch
+
+    def load_checkpoint_on_CityScapes(self, last, suffix=""):
+        # self.load_network(last, suffix) # load network parameters
+        filename = pathlib.Path(self.net_checkpoint_filename(last, suffix))
+        checkpoint = torch.load(filename, map_location="cpu")
+        self.model.load_state_dict(checkpoint["network"])
 
     def load_network(self, epoch, suffix=""):
         filename = pathlib.Path(self.net_checkpoint_filename(epoch, suffix))

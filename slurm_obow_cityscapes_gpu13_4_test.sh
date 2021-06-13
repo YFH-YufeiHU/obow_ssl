@@ -7,12 +7,12 @@
 #SBATCH	--gres=gpu:4			# reserve 8 gpus for each node
 #SBATCH --cpus-per-task=3       	# number of OpenMP threads
 # /!\ Caution, "multithread" in Slurm vocabulary refers to hyperthreading.
-#SBATCH --time=66:59:59             	##95:59:59            # maximum execution time requested (HH:MM:SS)a
+#SBATCH --time=16:59:59             	##95:59:59            # maximum execution time requested (HH:MM:SS)a
 #SBATCH --output=omp%j.out          	# name of output file
 #SBATCH --error=omp%j.out           	# name of error file (here, in common with outp
 
 
-#SBATCH --qos=qos_gpu-t4 # Pour specifier une QoS différente du défaut, vous pouvez au choix : - qos_gpu-t3 (défaut)  20h  96 noeuds- qos_gpu-t4  100h 1 noeud- qos_gpu-dev 2h  4 noeuds
+#SBATCH --qos=qos_gpu-t3 # Pour specifier une QoS différente du défaut, vous pouvez au choix : - qos_gpu-t3 (défaut)  20h  96 noeuds- qos_gpu-t4  100h 1 noeud- qos_gpu-dev 2h  4 noeuds
 #SBATCH --hint=nomultithread
 
 #SBATCH --account=uvt@gpu #ldr@gpu # uvt@gpu
@@ -33,4 +33,5 @@ python3 main_obow.py --config=cityscapes/ResNet50_OBoW_cityscapes\
                      --workers=32 -p=250 \
                      --dst-dir=./experiments/ --data-dir=../MoCo_SSL_segmentation/data/cityscapes/\
                      --multiprocessing-distributed \
+                     --resume
                      #--convert-to-torchvision

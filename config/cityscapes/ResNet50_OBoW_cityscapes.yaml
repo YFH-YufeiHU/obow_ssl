@@ -15,7 +15,7 @@ model:
     kappa: 8
   # (Optional) on-line learning of a linear classifier on top of teacher
   # features for monitoring purposes.
-  num_classes: 34
+  num_classes:
 
 # Optimization parameters.
 optim:
