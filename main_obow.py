@@ -325,7 +325,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.resume:
         print("load pretrained model of ImageNet on CityScapes!")
-        solver.load_checkpoint_on_CityScapes(last=200)
+        solver.load_checkpoint_on_CityScapes()
 
     if args.convert_to_torchvision:
         arch = model_opts['feature_extractor_arch']

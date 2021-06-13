@@ -205,7 +205,7 @@ class Solver:
             self.load_optimizer(epoch, suffix)
         self._epoch = epoch
 
-    def load_checkpoint_on_CityScapes(self, last, suffix=""):
+    def load_checkpoint_on_CityScapes(self, last="ImageNet", suffix=""):
         # self.load_network(last, suffix) # load network parameters
         filename = pathlib.Path(self.net_checkpoint_filename(last, suffix))
         checkpoint = torch.load(filename, map_location="cpu")
