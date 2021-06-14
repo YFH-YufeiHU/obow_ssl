@@ -209,7 +209,9 @@ class Solver:
         # self.load_network(last, suffix) # load network parameters
         filename = pathlib.Path(self.net_checkpoint_filename(last, suffix))
         checkpoint = torch.load(filename, map_location="cpu")
-        self.model.load_state_dict(checkpoint["network"])
+        state_dict = {k: v for k, v in checkpoint['network'].items() if
+                      (k in checkpoint['network'] and 'linear_classifier' not in k)}
+        self.model.load_state_dict(state_dict)
 
     def load_network(self, epoch, suffix=""):
         filename = pathlib.Path(self.net_checkpoint_filename(epoch, suffix))
