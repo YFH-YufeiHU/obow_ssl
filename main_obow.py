@@ -369,8 +369,7 @@ def main_worker(gpu, ngpus_per_node, args):
     solver.solve(
         loader_train=loader_train,
         distributed=args.distributed,
-        sampler_train=sampler_train,
-        loader_test=loaders_test_all)
+        sampler_train=sampler_train)
 
     solver.save_feature_extractor(distributed=args.distributed)
 
