@@ -28,7 +28,7 @@ optim:
   end_lr: 0.00003
   lr_schedule_type: "cos_warmup"
   warmup_epochs: 10
-  permanent: 10 # save a permanent checkpoint every 10 epochs.
+  permanent: 20 # save a permanent checkpoint every 10 epochs.
 
 # Data parameters:
 data:
